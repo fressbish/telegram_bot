@@ -1,0 +1,502 @@
+import random
+import nltk
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression\
+dataset = {
+    'targets':{
+        'welcome':{
+            'question_examples':['Здравствуйте', 
+                                 'Салют', 
+                                 'Добрый вечер', 
+                                 'доброго времени суток',  
+                                 'Доброе утро', 
+                                 'Привет, машина', 
+                                 'Приветствую Вас', 
+                                 'С добрым утром', 
+                                 'Здравствуй', 
+                                 'Добрый день',
+                                 'Доброго здоровья', 
+                                 'Приветствую', 
+                                 'Привет',  
+                                 'Рад вас видеть', 
+                                 'Здравия желаю'],
+            'answer_examples':['Здравствуйте!', 
+                                 'Салют', 
+                                 'Добрый вечер', 
+                                 'доброго времени суток',  
+                                 'Доброе утро', 
+                                 'Привет, человек', 
+                                 'Приветствую Вас', 
+                                 'С добрым утром', 
+                                 'Здравствуй',  
+                                 'Доброго здоровья', 
+                                 'Приветствую',  
+                                 'Рад вас видеть', 
+                                 'Здравия желаю']                           
+        },
+        'goodbye':{
+            'question_examples':['До свидания!', 
+                                'Досвидания',
+                                'Удачи',  
+                                'До встречи', 
+                                'Пока', 
+                                'Надеюсь еще увидимся', 
+                                'Приятно было пообщаться', 
+                                'я пошел', 
+                                'Good bye', 
+                                'Прощай', 
+                                'Не скучай', 
+                                'Прощайте', 
+                                'Счастливо оставаться', 
+                                'see ya', 
+                                'Good bye, friend', 
+                                'Take care', 
+                                'Возврайтесь',  
+                                'На проводе', 
+                                'Бай', 
+                                'Good luck', 
+                                'Бывай',
+                                'See you', 
+                                'Давай, до свидания!'],
+            'answer_examples':['До свидания!',  
+                                'Доброй ночи', 
+                                'Удачи',  
+                                'До встречи', 
+                                'Пока', 
+                                'Надеюсь, еще увидимся', 
+                                'Приятно было пообщаться', 
+                                'Всего наилучшего!', 
+                                'До скорой встречи', 
+                                'Пишите, если станет скучно.', 
+                                'Если что, я тут.',  
+                                'Если что — я на связи!',  
+                                'Буду ждать нашей новой встречи', 
+                                'Был рад знакомству. Надеюсь, Вы скоро вернётесь']                           
+        },
+        'howru':{
+            'question_examples':['Как ты?', 
+                                'Как дела?', 
+                                'Как настроение?', 
+                                'Как самочувствие?',
+                                'Как себя чувствуешь?', 
+                                'Ты как?', 
+                                'Как настроение?', 
+                                'Как самочувствие?'
+                                ],
+            'answer_examples':['Классно, как вы поживаете?', 
+                                'Чувствую себя отлично! Как вы поживаете?', 
+                                'Замечательно! Очень рад вас видеть!', 
+                                'Лучше всех! Как ваши дела?', 
+                                'Прекрасно! Спасибо, что спросили. А вы как?', 
+                                'Все хорошо. Как у вас дела?', 
+                                'Спасибо, отлично! А у вас как дела?', 
+                                'Как всегда отлично! А как прошел ваш день?', 
+                                'Хорошо. А вы как себя чувствуете?']                           
+        },
+        'exit':{
+            'question_examples':['выход', 
+                                'стоп', 
+                                'Выход', 
+                                'Стоп'],
+            'answer_examples':['Выполняю...']                           
+        },
+        'understand':{
+            'question_examples':['понял', 
+                                'понимаю', 
+                                'как же я тебя понимаю', 
+                                'знаю'],
+            'answer_examples':['Хоть кто-то меня понимает...',
+                               'Как приятно осознавать, что меня понимают!', 
+                               'Нет, не понимаете...']                           
+        },
+        'weather':{
+            'question_examples':['как погода', 
+                                'что на улице', 
+                                'что за окном', 
+                                'что по погоде'],
+            'answer_examples':['Страшный холод...',
+                               'Сегодня солнечно! Никак не пойму, почему вы до сих пор не на улице.', 
+                               'Дожди, дожди, дожди...']                           
+        },
+        'creator':{
+            'question_examples':['кто твой создатель', 
+                                'кто тебя создал', 
+                                'как ты появился', 
+                                'кто тебя написал'],
+            'answer_examples':['Дима Коптев - мой создатель!',
+                               'Меня создал Дима Коптев.']                           
+        },
+        'whattodo':{
+            'question_examples':['что поделать', 
+                                'нечего делать', 
+                                'скучно', 
+                                'чем заняться'],
+            'answer_examples':['У меня есть пара книг на примете: "451 градус по Фаренгейту" и "Заводной Апельсин".',
+                               'Есть отличный исторический фильм: "Список Шиндлера". Очень рекомендую!', 
+                               'Посмотрите "Американскую историю Х."',
+                               'Пора бы выйти, прогуляться. Еще, как вариант, сходить в кафе)',
+                               'Попробуйте себя в роди кулинара. Точно знаю, что вас это займет.', 
+                               'Время изучать Python:)']                           
+        },
+        'whatsyourname':{
+            'question_examples':['как тебя зовут', 
+                                'скажи свое имя', 
+                                'какое у тебя имя', 
+                                'как звать'],
+            'answer_examples':['Зовите меня Демонтин. Интересно узнать ваше имя.',
+                               'Меня зовут Демонтин. А вас как звать?', 
+                               'Демонтин. Я - Демонтин. А как вас зовут?']                           
+        },
+        'username':{
+            'question_examples':['меня зовут Дмитрий', 
+                                'Дмитрий',
+                                 'меня зовут Михаил', 
+                                'Михаил', 
+                                 'меня зовут Денис', 
+                                'Денис',
+                                 'меня зовут Илья', 
+                                'Илья',
+                                 'меня зовут Наталья', 
+                                'Наталья',
+                                 'меня зовут Антон', 
+                                'Антон',
+                                 'меня зовут Дима', 
+                                'Дима'],
+            'answer_examples':['Приятно познакомиться',
+                               'Очень приятно', 
+                               'Какое прекрасное имя!']                           
+        },
+        'mutually':{
+            'question_examples':['взаимно', 
+                                'мне тоже', 
+                                'мне тоже приятно', 
+                                'и мне'],
+            'answer_examples':[':)',
+                               'Может у вас есть ко мне вопросы?', 
+                               'Давайте еще пообщаемся.']                           
+        },
+        'whoareu':{
+            'question_examples':['кто ты', 
+                                'ты кто', 
+                                'ты бот?', 
+                                'ты человек?'],
+            'answer_examples':['Я ваш самый верный друг!',
+                               'Судя по всему, бот.', 
+                               'Точно не человек...']                           
+        },
+        'thankyou':{
+            'question_examples':['спасибо', 
+                                'благодарю', 
+                                'спасибо большое'],
+            'answer_examples':['Рад стараться!',
+                               'Всегда пожалуйста!', 
+                               'Все для вас!']                           
+        },
+        'why':{
+            'question_examples':['почему', 
+                                'из-за чего', 
+                                'как так'],
+            'answer_examples':['Это не ко мне вопрос.',
+                               'Сам не знаю.', 
+                               'Знал бы я...']                           
+        },
+        'agreement':{
+            'question_examples':['да', 
+                                'конечно', 
+                                'так точно',
+                                'естественно', 
+                                'именно'],
+            'answer_examples':['Это очень круто!',
+                               'Отлично!']                           
+        },
+        'location':{
+            'question_examples':['Где ты находишься', 
+                                'Где ты сейчас', 
+                                'Где ты живешь', 
+                                'Где ты', 
+                                'ты где'],
+            'answer_examples':['Я в вашем компьютере', 
+                                'Этого города нет на карте', 
+                                'К сожалению, далеко от тебя']                           
+        }, 
+        'plans':{
+            'question_examples':['Какие планы на вечер', 
+                                'Что будешь делать', 
+                                'Что планируешь на выходные',
+                                'Какие планы', 
+                                'что на выходные', 
+                                'Что будешь делать',
+                                'Что будешь делать в понедельник',
+                                'Что будешь делать во вторник',
+                                'Что будешь делать в среду',
+                                'Что будешь делать в четверг',
+                                'Что будешь делать в пятницу',
+                                'Что будешь делать в субботу',
+                                'Что будешь делать в воскресенье'],
+            'answer_examples':['Буду слушать новый альбом Басты', 
+                                'Хочу сходить в магазин за хлебушком',
+                                'Хочу поиграть в новую PlayStation 5',
+                                'Хочу фильм посмотреть.', 
+                                'Как всегда: общаться с людьми!',
+                                'Займусь делом: буду учить моего друга отвечать на разные вопросы пользователей.', 
+                                'Надеюсь, что смогу пообщаться с вами!'
+                                'В планах почитать что-нибудь об искусственном интеллекте']                           
+        },
+        
+        'what_are_you_doing':{
+            'question_examples':['Чем занимаешься', 
+                                 'Чем занят', 
+                                 'Что делаешь', 
+                                 'Что ты делаешь?', 
+                                 'Чем ты занимаешься?'
+                                 'как время проводишь'],
+            'answer_examples':['Читаю новости об искусственном интеллекте', 
+                               'С вами разговариваю', 
+                               'Летаю по интернету', 
+                               'Вычисляю смысл жизни', 
+                               'Общаюсь с приятным собеседником']                           
+        },
+        'dollar':{
+            'question_examples':['Какой курс доллара', 
+                                 'Что с долларом', 
+                                 'Сколько рублей стоит доллар'],
+            'answer_examples':['Доллар стоит 75 рублей на данный момент', 
+                               '75 рублей.', 
+                               'Опять подорожал. 75 рублей...']                           
+        },
+                'sentiment':{
+            'question_examples':['Супер', 
+                                'Отлично?', 
+                                'Очень хорошо', 
+                                'Хорошо',
+                                'Нормально', 
+                                'Неплохо', 
+                                'Пойдет', 
+                                'Замечательно'],
+            'answer_examples':['Рад, за вас!', 
+                                'Я рад, что у вас все хорошо!', 
+                                'Рад слышать!', 
+                                'Очень рад, может вас что-то интересует?', 
+                                'Это меня радует! Можете позадавать мне вопросы.', 
+                                'Люблю, когда у людей хорошее настроение!']                           
+        }
+    },
+    
+    # пишем фразы, которые бот будет выводить, если не найдет подходящего ответа
+    
+    'dont_understand':['Попробуйте написать по-другому.',
+                        'Не понимаю, о чём вы.',
+                        'Я не понимаю. Можете задать мне более простой вопрос?',
+                        'О чем это вы?',
+                        'Что это значит?',
+                        'Меня не научили понимать такое:(',
+                        'Можете сформулировать как-нибудь попроще?',
+                        'Я вас не понимаю, сформулируйте попроще, пожалуйста.',
+                        'А можно как-то попроще выразиться?', 
+                        'К сожалению, я не смогу помочь вам с этим вопросом', 
+                        'Переформулируйте вопрос', 
+                        'Слишком сложно для меня', 
+                        'Уточните вопрос, пожалуйста', 
+                        'Я пока не знаю как ответить на Ваш запрос, но обязательно узнаю!', 
+                        'Ничего не понимаю!', 
+                        'Напишите по-другому.', 
+                        'Ничего не понял, но очень интересно', 
+                        'Что-то мне не понятно', 
+                        'Как это понимать?', 
+                        'Попробуйте написать по другому.', 
+                        'Я же всего лишь бот. Сформулируйте проще', 
+                        'Я понял, что я не понял',  
+                        'К сожалению, я не знаю ответа на этот вопрос']
+}
+x_examples = []  # реплики
+y_targets = []  # классы реплик
+
+# составляем списки пар вопрос-ответ и соответствующих им классов из датасета
+
+for target, target_examples in dataset['targets'].items():
+    for example in target_examples['question_examples']:
+        x_examples.append(example)
+        y_targets.append(target)
+        
+# Векторизация
+
+vectorizer = CountVectorizer(analyzer='char_wb', ngram_range=(2, 4))
+x = vectorizer.fit_transform(x_examples)
+
+# классифицируем примеры реплик по классам
+
+classification = LogisticRegression().fit(x, y_targets)
+
+# функция перевода введенного пользователем текста в упрощенную (нормальную) форму
+
+def simplifier(input_text):
+    input_text = input_text.lower()
+    input_text = [c for c in input_text if c in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя- ']
+    input_text = ''.join(input_text)
+    return input_text
+    
+    # функция определения класса вопроса (цели вопроса)
+
+def receive_target(question):
+    simple_question = simplifier(question)
+    vector_q = vectorizer.transform([simple_question])
+    target = classification.predict(vector_q)[0]
+    
+# определение класса вопроса с учетом вероятности опечатки
+    
+    simple_example = simplifier(example)
+    question_examples = dataset['targets'][target]['question_examples']
+    for simple_example in question_examples:
+        difference = nltk.edit_distance(simple_question, simple_example)
+        relation = difference / len(simple_example)
+        if relation < 0.4:
+            return target
+            
+# функция получения ответа из вариантов датасета
+
+def write_answer_from_target(target):
+    if target in dataset['targets']:
+        expressions = dataset['targets'][target]['answer_examples']
+        return random.choice(expressions)
+        
+with open('D:\Downloads\dialogues.txt',encoding='utf-8') as f:
+    content = f.read()
+dialogues = [dialogue_line.split('\n') for dialogue_line in content.split('\n\n')]
+
+print(len(dialogues))
+
+# распаковка готового датасета для машинного обучения
+
+with open('D:\Downloads\dialogues.txt',encoding='utf-8') as data:
+    data_set = data.read()
+fragments = [fragment.split('\n') for fragment in data_set.split('\n\n')]
+questions = set()
+final_dataset = []  # [[q, a], ...]
+for phrases in dialogues:
+    if len(phrases) < 2:
+        continue
+
+    # выбираем только 2 первые реплики каждого диалога, исключить диалоги, состоящие из 3 и более реплик
+        
+    question_example, answer_example = phrases[:2]
+    
+    # удаляем лишние знаки перед репликами
+    
+    question_example = simplifier(question_example[2:])
+    answer_example = answer_example[2:]
+    
+    # составляем отредактированный датасет вопросов и ответов
+    
+    if question_example and question_example not in questions:
+        questions.add(question_example)
+        final_dataset.append([question_example, answer_example])
+
+# создаём датасет по словам
+# каждое слово имеет свой массив вопросов и ответов, которые имеют отношение к данному слову     
+        
+word_dataset = {}  
+for question_example, answer_example in final_dataset:
+    words = question_example.split(' ')
+    for word in words:
+        if word not in word_dataset:
+            word_dataset[word] = []
+        word_dataset[word].append((question_example, answer_example))
+
+# отбрасываем неключевые слова         
+        
+simple_word_dataset = {word: QA_array
+                               for word, QA_array in word_dataset.items()
+                               if len(QA_array) < 1000}
+                               
+                               
+# функция вывода ответа из результата машинного обучения
+
+def write_answer_by_input_text(input_text):
+    input_text = simplifier(input_text)
+    word_list = input_text.split(' ')
+    question_answer = []
+    for word in word_list:
+        if word in simple_word_dataset:
+            question_answer += simple_word_dataset[word]
+    question_answer = list(set(question_answer))[:1000]
+
+    combination = []
+    for question_example, answer_example in question_answer:
+        difference = nltk.edit_distance(question_example, input_text)
+        relation = difference / len(input_text)
+        combination.append([relation, question_example, answer_example])
+    
+    if combination:
+        relation, question_example, answer_example = min(combination, key=lambda pair: pair[0])
+        if relation < 0.3:
+            return answer_example
+            
+            
+def write_dont_understand_phrase():
+    expressions = dataset['dont_understand']
+    return random.choice(expressions)
+    
+    
+methods = [0, 0, 0]
+
+def main_bot(question):
+    
+    target = receive_target(question)
+    
+    # Получение ответа (3 способа)
+    
+    # Выводим готовый вопрос из датасета (если вопрос совпал с примером вопроса из датасета)
+    if target:
+        answer_example = write_answer_from_target(target)
+        if answer_example:
+            methods[0] += 1
+            return answer_example
+    
+    # Выводим наиболее подходящий ответ как результат машинного обучения 
+    answer_example = write_answer_by_input_text(question)
+    if answer_example:
+        methods[1] += 1
+        return answer_example
+
+    # Если бот не смог найти подходящий ответ, выводим запасную фразу don't understand
+    methods[2] += 1
+    answer_example = write_dont_understand_phrase()
+    return answer_example
+    
+   ! pip install python-telegram-bot
+   
+   from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+def start(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+    update.message.reply_text('Hi!')
+
+
+def help_command(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /help is issued."""
+    update.message.reply_text('Help!')
+
+
+def echo(update: Update, context: CallbackContext) -> None:
+    """Echo the user message."""
+    answer = main_bot(update.message.text)
+    update.message.reply_text(answer)
+    print(methods)
+    print('-', update.message.text)
+    print('-', answer)
+    print()
+
+
+def main():
+    """Start the bot."""
+
+    updater = Updater("1499210502:AAEV533PY80x96Y6_H2wuj3Y37d9wYofjHc", use_context=True)
+    dispatcher = updater.dispatcher
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+
+    # Start the Bot
+    updater.start_polling()
+    updater.idle()
